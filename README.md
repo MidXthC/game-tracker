@@ -1,1 +1,445 @@
 # game-tracker
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Battle Forge V2: Dungeon Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+  
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+      background: #030305;
+    }
+    .font-arcade { font-family: 'Orbitron', sans-serif; }
+    .neon-text { text-shadow: 0 0 10px var(--tw-shadow-color); }
+    .glow-stone { box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.15), 0 0 30px rgba(0, 0, 0, 0.8); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="text-zinc-100 min-h-screen flex items-center justify-center p-4 relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-950/20 via-zinc-950 to-black">
+
+  <div id="fx-layer" class="absolute inset-0 pointer-events-none z-50"></div>
+
+  <div id="view-gate" class="flex flex-col items-center gap-8 w-72 text-center z-20">
+    <div class="space-y-1">
+      <h1 class="font-arcade text-xs font-black tracking-[0.3em] text-purple-400 uppercase neon-text shadow-purple-500/30">FORGE_BARRICADE</h1>
+      <p class="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Pull the blade to claim the domain</p>
+    </div>
+
+    <div class="w-full h-64 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl relative flex flex-col items-center justify-end pb-8 glow-stone overflow-visible">
+      
+      <div class="absolute w-1 h-44 bg-zinc-950 border-x border-zinc-800/50 top-6 rounded-full"></div>
+
+      <div id="excalibur-blade" class="absolute w-12 h-36 top-6 flex flex-col items-center cursor-grab active:cursor-grabbing z-10 select-none">
+        <div class="w-4 h-4 bg-purple-500 rounded-full shadow-lg border border-purple-400"></div>
+        <div class="w-2.5 h-10 bg-gradient-to-b from-zinc-700 to-zinc-900 border-x border-zinc-600"></div>
+        <div class="w-12 h-2.5 bg-purple-500 rounded-xs shadow-md border-b border-purple-400"></div>
+        <div class="w-3.5 h-20 bg-gradient-to-b from-zinc-300 via-zinc-100 to-purple-400/80 clip-path-blade border-x border-white/20 relative">
+          <div class="absolute inset-y-0 left-1/2 w-[1px] bg-white/40"></div>
+        </div>
+      </div>
+
+      <div class="w-24 h-16 bg-zinc-950 border-2 border-zinc-800 rounded-xl flex items-center justify-center relative shadow-inner">
+        <div class="w-5 h-2 bg-purple-950 border border-purple-500/40 rounded-full shadow-lg animate-pulse"></div>
+        <div class="absolute -bottom-2 text-[8px] font-arcade tracking-widest text-zinc-600 font-bold">ANVIL_CORE</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-cabinet" class="hidden w-full max-w-md bg-zinc-900/90 border-2 border-zinc-800 rounded-3xl p-6 flex flex-col gap-6 relative shadow-2xl backdrop-blur-md opacity-0 scale-95">
+    
+    <header class="flex justify-between items-center border-b border-zinc-800 pb-4">
+      <div class="space-y-1">
+        <p class="text-[10px] font-arcade tracking-widest text-cyan-400 uppercase">HERO_STATUS</p>
+        <div class="flex items-center gap-2">
+          <span class="font-arcade text-xs font-black text-white">LVL <span id="player-lvl">1</span></span>
+          <div class="w-20 h-2 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+            <div id="player-xp-bar" class="h-full bg-cyan-400 w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-right space-y-1">
+        <p class="text-[10px] font-arcade tracking-widest text-yellow-400 uppercase">VAULT_GOLD</p>
+        <p class="font-arcade text-lg font-black text-yellow-400 tracking-wider shadow-yellow-500/20 neon-text">$<span id="player-gold">0</span></p>
+      </div>
+    </header>
+
+    <div class="space-y-1.5 bg-zinc-950/60 p-3 rounded-xl border border-zinc-800/60">
+      <div class="flex justify-between text-[10px] font-arcade text-rose-400 tracking-wider font-bold">
+        <span>VITAL_INTEGRITY</span>
+        <span><span id="player-hp-text">100</span> / 100 HP</span>
+      </div>
+      <div class="w-full h-3 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800">
+        <div id="player-hp-bar" class="h-full bg-gradient-to-r from-rose-500 to-pink-500 w-full transition-all duration-300 rounded-full"></div>
+      </div>
+    </div>
+
+    <div class="flex gap-2 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800 focus-within:border-purple-500/50 transition-all">
+      <input id="monster-input" type="text" placeholder="Spawn a task-monster..." maxlength="30" class="flex-1 bg-transparent px-3 py-2 text-sm text-zinc-100 focus:outline-none placeholder-zinc-600 font-medium" />
+      <button onclick="spawnMonster()" class="px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-arcade text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-indigo-500/10">SPAWN</button>
+    </div>
+
+    <div id="battle-grid" class="flex flex-col gap-3 min-h-[220px] max-h-[320px] overflow-y-auto pr-1 no-scrollbar">
+      </div>
+
+    <footer class="flex gap-3 justify-between text-[9px] font-arcade tracking-wider text-zinc-600 font-bold border-t border-zinc-800/50 pt-4">
+      <button onclick="systemWipe()" class="hover:text-rose-400 transition-colors uppercase">SECTOR_WIPE</button>
+      <button onclick="lockSystemManual()" class="hover:text-purple-400 transition-colors uppercase">LOCK_GATE</button>
+    </footer>
+  </div>
+
+  <div id="combat-overlay" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0">
+    <div class="bg-zinc-950 border-2 border-cyan-500/40 p-8 rounded-3xl w-full max-w-sm flex flex-col items-center gap-6 shadow-2xl relative text-center">
+      <div class="absolute -top-3 px-4 py-0.5 bg-cyan-500 text-black font-arcade font-black text-[10px] uppercase tracking-widest rounded-md">LOCK_ON MATRIX</div>
+      
+      <div class="space-y-1">
+        <h3 id="target-monster-name" class="font-arcade text-xl font-black text-white tracking-wide uppercase">MONSTER_NAME</h3>
+        <p class="text-xs text-zinc-400 font-medium">HAMMER MOUSE OR SPACEBAR TO ENGAGE</p>
+      </div>
+
+      <div class="w-full space-y-1">
+        <div class="w-full h-4 bg-zinc-900 rounded-full p-0.5 border border-zinc-800 overflow-hidden relative">
+          <div id="combat-boss-hp" class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 w-full transition-all duration-75 rounded-full"></div>
+        </div>
+        <div class="flex justify-between text-[9px] font-arcade font-bold text-cyan-400 tracking-widest px-1">
+          <span>TARGET_HP</span>
+          <span id="combat-hp-pct">100%</span>
+        </div>
+      </div>
+
+      <button id="smash-btn" class="w-28 h-28 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-500 font-arcade text-sm font-black text-white shadow-xl border-4 border-cyan-400/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer">SMASH!</button>
+      
+      <div class="text-[10px] font-arcade text-zinc-500 uppercase tracking-widest">
+        CONTAINMENT COOLDOWN: <span id="combat-timer" class="text-rose-400 font-black text-sm">5.0</span>s
+      </div>
+    </div>
+  </div>
+
+  <script>
+    gsap.registerPlugin(Draggable);
+
+    const synthAudio = (freq, type = "sine", duration = 0.1, gainVal = 0.03) => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch(e){}
+    };
+
+    let state = structuredClone(JSON.parse(localStorage.getItem("arcade_state"))) || {
+      lvl: 1, xp: 0, gold: 0, hp: 100,
+      monsters: [
+        { id: 1, name: "Database Leak Fiend", hp: 100, maxHp: 100, reward: 25 },
+        { id: 2, name: "Unfinished Documentation Bug", hp: 100, maxHp: 100, reward: 15 }
+      ]
+    };
+
+    let activeCombatMonster = null;
+    let combatTimerInterval = null;
+    let combatTimeRemaining = 5.0;
+    let gateDraggableInstance;
+
+    function saveState() {
+      localStorage.setItem("arcade_state", JSON.stringify(structuredClone(state)));
+      updateHUD();
+    }
+
+    function updateHUD() {
+      document.getElementById("player-lvl").innerText = state.lvl;
+      document.getElementById("player-gold").innerText = state.gold;
+      document.getElementById("player-hp-text").innerText = Math.max(0, state.hp);
+      
+      const xpNeeded = state.lvl * 100;
+      document.getElementById("player-xp-bar").style.width = `${(state.xp / xpNeeded) * 100}%`;
+      document.getElementById("player-hp-bar").style.width = `${Math.max(0, state.hp)}%`;
+
+      if (state.hp <= 0) {
+        synthAudio(110, "sawtooth", 0.6, 0.05);
+        gsap.to("#game-cabinet", { x: "random(-10, 10)", y: "random(-10, 10)", duration: 0.05, repeat: 10, yoyo: true });
+        alert("CRITICAL CORRUPTION: CORE SYSTEM SHUTDOWN");
+        systemWipe();
+      }
+    }
+
+    function triggerVFX(x, y, colorClass = "bg-cyan-400") {
+      const container = document.getElementById("fx-layer");
+      for (let i = 0; i < 15; i++) {
+        const d = document.createElement("div");
+        d.className = `absolute w-2 h-2 ${colorClass} pointer-events-none rounded-full shadow-lg`;
+        d.style.left = `${x}px`;
+        d.style.top = `${y}px`;
+        container.appendChild(d);
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 50 + Math.random() * 100;
+
+        gsap.to(d, {
+          x: Math.cos(angle) * speed,
+          y: Math.sin(angle) * speed,
+          scale: 0,
+          opacity: 0,
+          duration: 0.6 + Math.random() * 0.4,
+          ease: "power3.out",
+          onComplete: () => d.remove()
+        });
+      }
+    }
+
+    // EXCALIBUR KINETIC ENGINE CORE INITIALIZATION
+    window.addEventListener("load", () => {
+      gateDraggableInstance = Draggable.create("#excalibur-blade", {
+        type: "y",
+        bounds: { minY: -140, maxY: 0 },
+        edgeResistance: 0.95,
+        onDrag: function() {
+          // Play ascending/descending scraping audio dynamically based on blade depth position
+          const travelRatio = Math.abs(this.y) / 140;
+          synthAudio(150 + (travelRatio * 400), "triangle", 0.05, 0.01);
+          
+          // Flash stone aura color thresholds
+          if(travelRatio > 0.9) {
+            triggerVFX(window.innerWidth / 2, window.innerHeight / 2 + 100, "bg-purple-500");
+          }
+        },
+        onRelease: function() {
+          // Verify if sword pull meets structural depth criteria
+          if (Math.abs(this.y) >= 135) {
+            this.disable();
+            synthAudio(880, "sine", 0.4, 0.06);
+            synthAudio(1200, "sawtooth", 0.3, 0.04);
+            
+            // Blast dungeon gate layout arrays out of perspective context
+            gsap.to("#view-gate", {
+              scale: 0.9,
+              opacity: 0,
+              duration: 0.3,
+              ease: "power2.in",
+              onComplete: () => {
+                document.getElementById("view-gate").classList.add("hidden");
+                
+                // Spawn Cabinet Frame array structures
+                const cabinet = document.getElementById("game-cabinet");
+                cabinet.classList.remove("hidden");
+                gsap.to(cabinet, { opacity: 1, scale: 1, duration: 0.4, ease: "power3.out" });
+              }
+            });
+          } else {
+            // Snap back mechanism with sliding audio
+            synthAudio(180, "sawtooth", 0.2, 0.03);
+            gsap.to(this.target, { y: 0, duration: 0.4, ease: "bounce.out" });
+          }
+        }
+      });
+    });
+
+    function spawnMonster() {
+      const input = document.getElementById("monster-input");
+      const val = input.value.trim();
+      if (!val) return;
+
+      const randomHp = 60 + Math.floor(Math.random() * 100);
+      state.monsters.push({
+        id: Date.now(),
+        name: val,
+        hp: randomHp,
+        maxHp: randomHp,
+        reward: Math.floor(randomHp / 4)
+      });
+
+      input.value = "";
+      synthAudio(440, "square", 0.12);
+      saveState();
+      renderMonsters();
+    }
+
+    function renderMonsters() {
+      const grid = document.getElementById("battle-grid");
+      grid.innerHTML = "";
+
+      if(state.monsters.length === 0) {
+        grid.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center text-zinc-600 text-xs font-arcade tracking-wider gap-1 py-12"><span>[ CRYPT_CLEARED ]</span></div>`;
+        return;
+      }
+
+      state.monsters.forEach(m => {
+        const pct = (m.hp / m.maxHp) * 100;
+        const row = document.createElement("div");
+        row.className = "w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl flex flex-col gap-3 hover:border-zinc-700 transition-all cursor-pointer relative";
+        
+        row.innerHTML = `
+          <div class="flex justify-between items-start gap-4">
+            <div class="space-y-0.5">
+              <h4 class="text-sm font-bold text-zinc-100 tracking-wide">${m.name}</h4>
+              <p class="text-[9px] font-arcade text-zinc-500 tracking-widest font-bold">BOUNTY: <span class="text-yellow-400">$${m.reward}</span></p>
+            </div>
+            <button class="px-3 py-1 bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 border border-rose-900/40 font-arcade text-[9px] font-bold rounded-md tracking-wider transition-all">FLEE</button>
+          </div>
+          <div class="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500" style="width: ${pct}%"></div>
+          </div>
+        `;
+
+        row.onclick = (e) => {
+          if(e.target.tagName === 'BUTTON') {
+            e.stopPropagation();
+            fleeMonster(m.id);
+            return;
+          }
+          initiateCombat(m);
+        };
+        grid.appendChild(row);
+      });
+    }
+
+    function initiateCombat(monster) {
+      activeCombatMonster = monster;
+      combatTimeRemaining = 5.0;
+
+      document.getElementById("target-monster-name").innerText = monster.name;
+      document.getElementById("combat-boss-hp").style.width = `${(monster.hp / monster.maxHp) * 100}%`;
+      document.getElementById("combat-hp-pct").innerText = `${Math.round((monster.hp / monster.maxHp) * 100)}%`;
+      document.getElementById("combat-timer").innerText = combatTimeRemaining.toFixed(1);
+
+      const overlay = document.getElementById("combat-overlay");
+      overlay.classList.remove("hidden");
+      gsap.to(overlay, { opacity: 1, duration: 0.12 });
+
+      clearInterval(combatTimerInterval);
+      combatTimerInterval = setInterval(() => {
+        combatTimeRemaining -= 0.1;
+        if(combatTimeRemaining <= 0) {
+          combatTimeRemaining = 0;
+          clearInterval(combatTimerInterval);
+          combatFailure();
+        }
+        document.getElementById("combat-timer").innerText = Math.max(0, combatTimeRemaining).toFixed(1);
+      }, 100);
+    }
+
+    function registerStrike(e) {
+      if (!activeCombatMonster) return;
+      let x = window.innerWidth / 2, y = window.innerHeight / 2;
+      if (e && e.clientX) { x = e.clientX; y = e.clientY; }
+
+      activeCombatMonster.hp -= 14;
+      synthAudio(800 + (Math.random() * 250), "triangle", 0.07, 0.05);
+      triggerVFX(x, y, "bg-cyan-400");
+      gsap.to("#combat-overlay > div", { x: "random(-4, 4)", y: "random(-4, 4)", duration: 0.04, repeat: 1, yoyo: true });
+
+      const pct = Math.max(0, (activeCombatMonster.hp / activeCombatMonster.maxHp) * 100);
+      document.getElementById("combat-boss-hp").style.width = `${pct}%`;
+      document.getElementById("combat-hp-pct").innerText = `${Math.round(pct)}%`;
+
+      if (activeCombatMonster.hp <= 0) {
+        clearInterval(combatTimerInterval);
+        combatVictory();
+      }
+    }
+
+    document.getElementById("smash-btn").addEventListener("mousedown", registerStrike);
+    window.addEventListener("keydown", (e) => {
+      if(activeCombatMonster && e.key === " ") {
+        e.preventDefault();
+        registerStrike(null);
+      }
+    });
+
+    function combatVictory() {
+      const overlay = document.getElementById("combat-overlay");
+      synthAudio(1200, "sine", 0.25, 0.04);
+
+      state.gold += activeCombatMonster.reward;
+      state.xp += 35;
+
+      const xpNeeded = state.lvl * 100;
+      if (state.xp >= xpNeeded) {
+        state.xp -= xpNeeded;
+        state.lvl += 1;
+        state.hp = Math.min(100, state.hp + 20);
+        alert(`LEVEL UP! CURRENT INTELLECT CAP: LVL ${state.lvl}`);
+      }
+
+      state.monsters = state.monsters.filter(m => m.id !== activeCombatMonster.id);
+      activeCombatMonster = null;
+
+      gsap.to(overlay, { opacity: 0, duration: 0.12, onComplete: () => {
+        overlay.classList.add("hidden");
+        saveState();
+        renderMonsters();
+      }});
+    }
+
+    function combatFailure() {
+      const overlay = document.getElementById("combat-overlay");
+      state.hp -= 20;
+      synthAudio(200, "sawtooth", 0.35, 0.05);
+      gsap.to("#game-cabinet", { x: "random(-8, 8)", y: "random(-8, 8)", duration: 0.05, repeat: 6, yoyo: true });
+      activeCombatMonster = null;
+
+      gsap.to(overlay, { opacity: 0, duration: 0.12, onComplete: () => {
+        overlay.classList.add("hidden");
+        saveState();
+        renderMonsters();
+      }});
+    }
+
+    function fleeMonster(id) {
+      state.hp -= 5;
+      synthAudio(250, "sine", 0.1);
+      state.monsters = state.monsters.filter(m => m.id !== id);
+      saveState();
+      renderMonsters();
+    }
+
+    function lockSystemManual() {
+      const cabinet = document.getElementById("game-cabinet");
+      gsap.to(cabinet, { opacity: 0, scale: 0.95, duration: 0.2, onComplete: () => {
+        cabinet.classList.add("hidden");
+        
+        const gate = document.getElementById("view-gate");
+        gate.classList.remove("hidden");
+        gsap.to(gate, { opacity: 1, scale: 1, duration: 0.3 });
+        
+        gsap.set("#excalibur-blade", { y: 0 });
+        if(gateDraggableInstance[0]) gateDraggableInstance[0].enable();
+      }});
+    }
+
+    function systemWipe() {
+      localStorage.removeItem("arcade_state");
+      state = {
+        lvl: 1, xp: 0, gold: 0, hp: 100,
+        monsters: [
+          { id: 1, name: "Database Leak Fiend", hp: 100, maxHp: 100, reward: 25 },
+          { id: 2, name: "Unfinished Documentation Bug", hp: 100, maxHp: 100, reward: 15 }
+        ]
+      };
+      saveState();
+      renderMonsters();
+    }
+
+    updateHUD();
+    renderMonsters();
+  </script>
+</body>
+</html>
